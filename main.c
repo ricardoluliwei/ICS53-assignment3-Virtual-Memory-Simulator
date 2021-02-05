@@ -10,10 +10,7 @@
 #include "string.h"
 #define MAX_LINE 80
 
-struct linked_list{
-    int phy_number;
-    struct linked_list* next;
-};
+int counter = 0;
 
 int Virtual_MEM[8][8];
 
@@ -23,52 +20,91 @@ int Physical_MEM[4][8];
 
 int PHY_MEM_INFO[4]; //store the logical address of related physical address
 
-struct linked_list* start; //start node for FIFO
+int Page_table[8][3]; //0 is valid bit 1 is dirty bit 2 is PN
 
 int LTable[4]; // keep track of the activity score of each memory for LRU
 
+int FTable[4]; //keep track of physical memory's swap time stamp for FIFO
+
 int mode;  //mode 1: LRU  mode 0: FIFO; Default is 0(FIFO)
 
-int LRU_swap(int disk_number){
-    int i, max_page = 0, maxbuf = -1;
-    for(i =0; i< 4; i++){ // find phy addr with least usage
-        if(LTable[i] >=maxbuf){
-            max_page = i;
-            maxbuf = LTable[i];
+void write_page_table(int n, int f, int s, int t){
+    Page_table[n][0] = f;
+    Page_table[n][1] = s;
+    Page_table[n][2] = t;
+}
+
+// return a ppn
+int LRU_swap(int vpn){
+    int victim;
+    int lowest;
+    int ppn;
+    int i;
+
+    for(i = 0; i < 4; i++){
+        if (LTable[i] == -1){
+            // find empty main memory page, copy disk page into it.
+            memcpy(Physical_MEM[i], Disk[vpn], 8 * sizeof(int));
+            // set up pagetable entry
+            write_page_table(vpn, 1, 0, i);
+            return i;
         }
     }
-    for(i =0; i< 8; i++){//save phy mem to disk
-        Disk[PHY_MEM_INFO[max_page]][i] = Physical_MEM[max_page][i];
+
+    // if no main memory page is empty, we need to find a victim
+
+    lowest = INT32_MAX;
+    for(i = 0; i < 8; i++){
+        if(Page_table[i][0]){
+            // the page is in main memory, try to find victim
+            if(LTable[Page_table[i][2]] < lowest){
+                victim = i;
+            }
+        }
     }
-    for(i =0; i< 8; i++){// read from disk
-        Physical_MEM[max_page][i] = Disk[disk_number][i];
-    }
-    PHY_MEM_INFO[max_page] = disk_number;
-    return max_page;
+    ppn = Page_table[victim][2];
+    memcpy(Disk[victim], Physical_MEM[ppn], 8 * sizeof(int));
+    memcpy(Physical_MEM[ppn], Disk[vpn], 8 * sizeof(int));
+
+    write_page_table(victim, 0, 0, victim);
+    write_page_table(vpn, 1, 0, ppn);
+    return ppn;
 };
 
 int FIFO_swap(int disk_number){
-    int i;
-    int phy_needs_to_swaped = start->phy_number;
-    for(i =0; i< 8; i++){ //save phy mem to disk
-        Disk[PHY_MEM_INFO[phy_needs_to_swaped]][i] = Physical_MEM[phy_needs_to_swaped][i];
+    int i, min_page = 0, minbuf = -1, old_vnumber = -1; //min page: physical address that needs to be swaped
+    for(i =0; i< 4; i++){ // find phy addr with least usage
+        if(FTable[i] <=minbuf){
+            min_page = i;
+            minbuf = FTable[i];
+        }
     }
-    for(i =0; i< 8; i++){ // read from disk
-        Physical_MEM[phy_needs_to_swaped][i] = Disk[disk_number][i];
+    //find old vnumber
+    for(i =0; i< 8; i++){
+        if(Page_table[i][2] == min_page && Page_table[i][0] == 1){
+            old_vnumber = i;
+            break;
+        }
     }
-    struct linked_list *new_page = malloc(sizeof(struct linked_list));
-    new_page->next = NULL;
-    new_page->phy_number = disk_number;
-    struct linked_list *buf = start->next;
-    start->next = start->next->next;
-    free(buf);
-    struct linked_list *buf2 = start;
-    while(buf2->next!=NULL){
-        buf2 = buf2->next;
+    if(old_vnumber == -1) {perror("cannot find old vnumber");}
+    for(i =0; i< 8; i++){//save phy mem to disk
+        Disk[old_vnumber][i] = Physical_MEM[min_page][i];
     }
-    buf2->next = new_page;
-    PHY_MEM_INFO[phy_needs_to_swaped] = disk_number; // update phy mem info
-    return phy_needs_to_swaped;
+    //update PDE of original page
+    Page_table[old_vnumber][0] = 0;
+    Page_table[old_vnumber][1] = 0;
+    Page_table[old_vnumber][2] = old_vnumber;
+    //
+    for(i =0; i< 8; i++){// read from disk
+        Physical_MEM[min_page][i] = Disk[disk_number][i];
+    }
+    //update PDE of new page
+    Page_table[disk_number][0] = 1;
+    Page_table[disk_number][1] = 0;
+    Page_table[disk_number][2] = min_page;
+    //update Ftable
+    FTable[min_page] = counter;
+    return min_page;
 };
 
 void read_mem(int vaddr){
