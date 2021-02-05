@@ -162,6 +162,32 @@ void showptable(){
     return;
 };
 
+void init(){
+    int i, j;
+    mode = 0;
+    counter = 0;
+    for(i=0; i< 4;i++){
+        FTable[i] = 0;
+        LTable[i] = 0;
+    }
+    for(i=0; i< 8;i++){
+        for(j = 0; j < 8; j++){
+            Disk[i][j] = -1;
+            Virtual_MEM[i][j] = -1;
+        }
+    }
+    for(i=0; i< 4;i++){
+        for(j = 0; j < 8; j++){
+            Physical_MEM[i][j] = -1;
+        }
+    }
+    for(i=0; i< 8;i++){
+        Page_table[i][0] = 0;
+        Page_table[i][0] = 0;
+        Page_table[i][0] = i;
+    }
+}
+
 int main(int argc, const char * argv[]) {
     // insert code here...
     printf("Hello, World!\n");
