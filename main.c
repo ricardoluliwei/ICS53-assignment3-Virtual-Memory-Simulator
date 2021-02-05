@@ -10,10 +10,7 @@
 #include "string.h"
 #define MAX_LINE 80
 
-struct linked_list{
-    int phy_number;
-    struct linked_list* next;
-};
+int counter = 0;
 
 int Virtual_MEM[8][8];
 
@@ -23,9 +20,11 @@ int Physical_MEM[4][8];
 
 int PHY_MEM_INFO[4]; //store the logical address of related physical address
 
-struct linked_list* start; //start node for FIFO
+int Page_table[8][3]; //0 is valid bit 1 is dirty bit 2 is PN
 
 int LTable[4]; // keep track of the activity score of each memory for LRU
+
+int FTable[4]; //keep track of physical memory's swap time stamp for FIFO
 
 int mode;  //mode 1: LRU  mode 0: FIFO; Default is 0(FIFO)
 
@@ -48,27 +47,39 @@ int LRU_swap(int disk_number){
 };
 
 int FIFO_swap(int disk_number){
-    int i;
-    int phy_needs_to_swaped = start->phy_number;
-    for(i =0; i< 8; i++){ //save phy mem to disk
-        Disk[PHY_MEM_INFO[phy_needs_to_swaped]][i] = Physical_MEM[phy_needs_to_swaped][i];
+    int i, min_page = 0, minbuf = -1, old_vnumber = -1; //min page: physical address that needs to be swaped
+    for(i =0; i< 4; i++){ // find phy addr with least usage
+        if(FTable[i] <=minbuf){
+            min_page = i;
+            minbuf = FTable[i];
+        }
     }
-    for(i =0; i< 8; i++){ // read from disk
-        Physical_MEM[phy_needs_to_swaped][i] = Disk[disk_number][i];
+    //find old vnumber
+    for(i =0; i< 8; i++){
+        if(Page_table[i][2] == min_page && Page_table[i][0] == 1){
+            old_vnumber = i;
+            break;
+        }
     }
-    struct linked_list *new_page = malloc(sizeof(struct linked_list));
-    new_page->next = NULL;
-    new_page->phy_number = disk_number;
-    struct linked_list *buf = start->next;
-    start->next = start->next->next;
-    free(buf);
-    struct linked_list *buf2 = start;
-    while(buf2->next!=NULL){
-        buf2 = buf2->next;
+    if(old_vnumber == -1) {perror("cannot find old vnumber");}
+    for(i =0; i< 8; i++){//save phy mem to disk
+        Disk[old_vnumber][i] = Physical_MEM[min_page][i];
     }
-    buf2->next = new_page;
-    PHY_MEM_INFO[phy_needs_to_swaped] = disk_number; // update phy mem info
-    return phy_needs_to_swaped;
+    //update PDE of original page
+    Page_table[old_vnumber][0] = 0;
+    Page_table[old_vnumber][1] = 0;
+    Page_table[old_vnumber][2] = old_vnumber;
+    //
+    for(i =0; i< 8; i++){// read from disk
+        Physical_MEM[min_page][i] = Disk[disk_number][i];
+    }
+    //update PDE of new page
+    Page_table[disk_number][0] = 1;
+    Page_table[disk_number][1] = 0;
+    Page_table[disk_number][2] = min_page;
+    //update Ftable
+    FTable[min_page] = counter;
+    return min_page;
 };
 
 void read_mem(int vaddr){
@@ -126,10 +137,36 @@ void showptable(){
     return;
 };
 
+void init(){
+    int i, j;
+    mode = 0;
+    counter = 0;
+    for(i=0; i< 4;i++){
+        FTable[i] = 0;
+        LTable[i] = 0;
+    }
+    for(i=0; i< 8;i++){
+        for(j = 0; j < 8; j++){
+            Disk[i][j] = -1;
+            Virtual_MEM[i][j] = -1;
+        }
+    }
+    for(i=0; i< 4;i++){
+        for(j = 0; j < 8; j++){
+            Physical_MEM[i][j] = -1;
+        }
+    }
+    for(i=0; i< 8;i++){
+        Page_table[i][0] = 0;
+        Page_table[i][0] = 0;
+        Page_table[i][0] = i;
+    }
+}
+
 int main(int argc, const char * argv[]) {
     // insert code here...
     printf("Hello, World!\n");
-    mode = 0;
+    init();
     if(strcmp(argv[1], "LRU")==0){mode = 1;}
     char input[800], *buffer, full[800];
     int bufsize = MAX_LINE;
@@ -170,7 +207,7 @@ int main(int argc, const char * argv[]) {
            if(strcmp(args[0], "showptable")==0){
                continue;
            }
-           
+           counter++;
        }
     return 0;
 }
