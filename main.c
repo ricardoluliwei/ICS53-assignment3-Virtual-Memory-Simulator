@@ -28,10 +28,10 @@ int FTable[4]; //keep track of physical memory's swap time stamp for FIFO
 
 int mode;  //mode 1: LRU  mode 0: FIFO; Default is 0(FIFO)
 
-void write_page_table(int n, int f, int s, int t){
-    Page_table[n][0] = f;
-    Page_table[n][1] = s;
-    Page_table[n][2] = t;
+void write_page_table(int n, int b0, int b1, int b2){
+    Page_table[n][0] = b0;
+    Page_table[n][1] = b1;
+    Page_table[n][2] = b2;
 }
 
 // return a ppn
@@ -68,6 +68,9 @@ int LRU_swap(int vpn){
 
     write_page_table(victim, 0, 0, victim);
     write_page_table(vpn, 1, 0, ppn);
+
+    LTable[ppn] = 0;
+    PHY_MEM_INFO[ppn] = vpn;
     return ppn;
 };
 
@@ -91,17 +94,13 @@ int FIFO_swap(int disk_number){
         Disk[old_vnumber][i] = Physical_MEM[min_page][i];
     }
     //update PDE of original page
-    Page_table[old_vnumber][0] = 0;
-    Page_table[old_vnumber][1] = 0;
-    Page_table[old_vnumber][2] = old_vnumber;
+    write_page_table(old_vnumber, 0, 0, old_vnumber);
     //
     for(i =0; i< 8; i++){// read from disk
         Physical_MEM[min_page][i] = Disk[disk_number][i];
     }
     //update PDE of new page
-    Page_table[disk_number][0] = 1;
-    Page_table[disk_number][1] = 0;
-    Page_table[disk_number][2] = min_page;
+    write_page_table(disk_number, 1, 0, min_page);
     //update Ftable
     FTable[min_page] = counter;
     return min_page;
@@ -150,17 +149,48 @@ void read_mem(int vaddr){
 
 
 
-void write_mem(int v_addr, int num){
+void write_mem(int vaddr, int num){
+    int i,j;
+    int vpn = vaddr/8;
+    int offset = vaddr%8;
+    int ppn;
+
+    if(Page_table[vpn][0]){
+        // if it is in main memory
+        ppn = Page_table[vpn][2];
+    } else{
+        ppn = mode ? LRU_swap(vpn) : FIFO_swap(vpn);
+    }
+    // write
+    Physical_MEM[ppn][offset] = num;
+    // change information
+    LTable[ppn]++;
+    
     return;
 };
 
 void showmain(int ppn){
+    int i,j;
+    for(i = 0; i<8; i++){
+        printf("%d: %d\n", ppn*8+i, Physical_MEM[ppn][i]);
+    }
     return;
 };
 
 void showptable(){
-    return;
+    int i,j;
+    for(i = 0; i<8; i++){
+        printf("%d:%d:%d:%d\n", i, Page_table[i][0] , Page_table[i][1] , Page_table[i][2]);
+    }
 };
+
+void showdisk(int dpn){
+    int i;
+    for(i=0; i<8; i++){
+        printf("%d: %d\n", dpn*8+i, Disk[dpn][i]);
+    }
+    return;
+}
 
 void init(){
     int i, j;
@@ -168,7 +198,7 @@ void init(){
     counter = 0;
     for(i=0; i< 4;i++){
         FTable[i] = 0;
-        LTable[i] = 0;
+        LTable[i] = -1;
     }
     for(i=0; i< 8;i++){
         for(j = 0; j < 8; j++){
@@ -182,57 +212,62 @@ void init(){
         }
     }
     for(i=0; i< 8;i++){
-        Page_table[i][0] = 0;
-        Page_table[i][0] = 0;
-        Page_table[i][0] = i;
+         write_page_table(i, 0, 0, i);
     }
 }
 
 int main(int argc, const char * argv[]) {
     // insert code here...
     printf("Hello, World!\n");
-    mode = 0;
+    init();
     if(strcmp(argv[1], "LRU")==0){mode = 1;}
-    char input[800], *buffer, full[800];
+    char input[800], *buffer;
     int bufsize = MAX_LINE;
-    char **args = malloc(bufsize *sizeof(char *));
-    int counter = 0;
+    char* spliter = " \n";
     while (1) // while loop to get user input
        {
            printf("> ");
            memset(input, 0, 80);
-           memset(args, 0, bufsize *sizeof(char *));
            fgets(input, (sizeof input / sizeof input[0]), stdin);
-           if(input[strlen(input)-1] == '\n') input[strlen(input)-1]=0;
-           
+           if(input[strlen(input)-1] == '\n') input[strlen(input)-1]=0; 
            if(strcmp(input, "quit") == 0){break;}
-           strcpy(full, input);
-           buffer = strtok(input, " ");
+           buffer = strtok(input, spliter);
 
-           counter = 0;
-           while(buffer) {
-               //printf( "%s\n", buffer );
-               //strcpy(args[counter], buffer);
-               args[counter] = buffer;
-               buffer = strtok(NULL, " ");
-               counter++;
-           }
-           if(strcmp(args[0], "read")==0){
+           if(strcmp(buffer, "read")==0){
+               int vaddr;
+               buffer = strtok(NULL, spliter);
+               vaddr = atoi(buffer);
+               read_mem(vaddr);
                continue;
            }
-           if(strcmp(args[0], "write")==0){
+           if(strcmp(buffer, "write")==0){
+               int vaddr;
+               int num;
+               buffer = strtok(NULL, spliter);
+               vaddr = atoi(buffer);
+               buffer = strtok(NULL, spliter);
+               num = atoi(buffer);
+               write_mem(vaddr, num);
                continue;
            }
-           if(strcmp(args[0], "showmain")==0){
+           if(strcmp(buffer, "showmain")==0){
+               int ppn;
+               buffer = strtok(NULL, spliter);
+               ppn = atoi(buffer);
+               showmain(ppn);
                continue;
            }
-           if(strcmp(args[0], "showdisk")==0){
+           if(strcmp(buffer, "showdisk")==0){
+                int dpn;
+                buffer = strtok(NULL, spliter);
+                dpn = atoi(buffer);
+                showdisk(dpn);
+                continue;
+           }
+           if(strcmp(buffer, "showptable")==0){
+               showptable();
                continue;
            }
-           if(strcmp(args[0], "showptable")==0){
-               continue;
-           }
-           
        }
     return 0;
 }
