@@ -28,22 +28,47 @@ int FTable[4]; //keep track of physical memory's swap time stamp for FIFO
 
 int mode;  //mode 1: LRU  mode 0: FIFO; Default is 0(FIFO)
 
-int LRU_swap(int disk_number){
-    int i, max_page = 0, maxbuf = -1;
-    for(i =0; i< 4; i++){ // find phy addr with least usage
-        if(LTable[i] >=maxbuf){
-            max_page = i;
-            maxbuf = LTable[i];
+void write_page_table(int n, int f, int s, int t){
+    Page_table[n][0] = f;
+    Page_table[n][1] = s;
+    Page_table[n][2] = t;
+}
+
+// return a ppn
+int LRU_swap(int vpn){
+    int victim;
+    int lowest;
+    int ppn;
+    int i;
+
+    for(i = 0; i < 4; i++){
+        if (LTable[i] == -1){
+            // find empty main memory page, copy disk page into it.
+            memcpy(Physical_MEM[i], Disk[vpn], 8 * sizeof(int));
+            // set up pagetable entry
+            write_page_table(vpn, 1, 0, i);
+            return i;
         }
     }
-    for(i =0; i< 8; i++){//save phy mem to disk
-        Disk[PHY_MEM_INFO[max_page]][i] = Physical_MEM[max_page][i];
+
+    // if no main memory page is empty, we need to find a victim
+
+    lowest = INT32_MAX;
+    for(i = 0; i < 8; i++){
+        if(Page_table[i][0]){
+            // the page is in main memory, try to find victim
+            if(LTable[Page_table[i][2]] < lowest){
+                victim = i;
+            }
+        }
     }
-    for(i =0; i< 8; i++){// read from disk
-        Physical_MEM[max_page][i] = Disk[disk_number][i];
-    }
-    PHY_MEM_INFO[max_page] = disk_number;
-    return max_page;
+    ppn = Page_table[victim][2];
+    memcpy(Disk[victim], Physical_MEM[ppn], 8 * sizeof(int));
+    memcpy(Physical_MEM[ppn], Disk[vpn], 8 * sizeof(int));
+
+    write_page_table(victim, 0, 0, victim);
+    write_page_table(vpn, 1, 0, ppn);
+    return ppn;
 };
 
 int FIFO_swap(int disk_number){
