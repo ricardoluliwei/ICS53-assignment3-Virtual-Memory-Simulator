@@ -151,11 +151,18 @@ void write_mem(int v_addr, int num){
 };
 
 void showmain(int ppn){
+    int i,j;
+    for(i = 0; i<8; i++){
+        printf("%d: %d\n", ppn*8+i, Physical_MEM[ppn][i]);
+    }
     return;
 };
 
 void showptable(){
-    return;
+    int i,j;
+    for(i = 0; i<8; i++){
+        printf("%d:%d:%d:%d\n", i, Page_table[i][0] , Page_table[i][1] , Page_table[i][2]);
+    }
 };
 
 void init(){
