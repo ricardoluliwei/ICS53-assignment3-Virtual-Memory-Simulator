@@ -91,17 +91,13 @@ int FIFO_swap(int disk_number){
         Disk[old_vnumber][i] = Physical_MEM[min_page][i];
     }
     //update PDE of original page
-    Page_table[old_vnumber][0] = 0;
-    Page_table[old_vnumber][1] = 0;
-    Page_table[old_vnumber][2] = old_vnumber;
+    write_page_table(old_vnumber, 0, 0, old_vnumber);
     //
     for(i =0; i< 8; i++){// read from disk
         Physical_MEM[min_page][i] = Disk[disk_number][i];
     }
     //update PDE of new page
-    Page_table[disk_number][0] = 1;
-    Page_table[disk_number][1] = 0;
-    Page_table[disk_number][2] = min_page;
+    write_page_table(disk_number, 1, 0, min_page);
     //update Ftable
     FTable[min_page] = counter;
     return min_page;
