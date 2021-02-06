@@ -244,6 +244,7 @@ int main(int argc, const char * argv[]) {
                showptable();
                continue;
            }
+           counter++;
        }
     return 0;
 }
