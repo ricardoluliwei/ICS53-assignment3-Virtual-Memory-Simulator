@@ -1,9 +1,4 @@
-//
-//  main.c
-//  53-Assignment3
-//
-//  Created by Tony on 2021/1/31.
-//
+//Qiwei He 47771452 Liwei Lu 90101531
 
 #include <stdio.h>
 #include <limits.h>
