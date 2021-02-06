@@ -186,7 +186,7 @@ void init(){
     mode = 0;
     counter = 0;
     for(i=0; i< 4;i++){
-        FTable[i] = 0;
+        FTable[i] = -1;
         LTable[i] = -1;
     }
     for(i=0; i< 8;i++){
