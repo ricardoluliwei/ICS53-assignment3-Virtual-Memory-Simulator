@@ -12,8 +12,6 @@
 
 int counter = 0;
 
-int Virtual_MEM[8][8];
-
 int Disk[8][8];
 
 int Physical_MEM[4][8];
@@ -203,7 +201,6 @@ void init(){
     for(i=0; i< 8;i++){
         for(j = 0; j < 8; j++){
             Disk[i][j] = -1;
-            Virtual_MEM[i][j] = -1;
         }
     }
     for(i=0; i< 4;i++){
