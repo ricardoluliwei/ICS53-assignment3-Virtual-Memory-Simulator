@@ -195,7 +195,6 @@ void init(){
 
 int main(int argc, const char * argv[]) {
     // insert code here...
-    printf("Hello, World!\n");
     init();
     if(argc ==2 && strcmp(argv[1], "LRU")==0){mode = 1;}
     char input[800], *buffer;
