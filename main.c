@@ -219,7 +219,7 @@ int main(int argc, const char * argv[]) {
            if(input[strlen(input)-1] == '\n') input[strlen(input)-1]=0;
            if(strcmp(input, "quit") == 0){break;}
            buffer = strtok(input, spliter);
-
+           counter++;
            if(strcmp(buffer, "read")==0){
                int vaddr;
                buffer = strtok(NULL, spliter);
@@ -255,7 +255,6 @@ int main(int argc, const char * argv[]) {
                showptable();
                continue;
            }
-           counter++;
        }
     return 0;
 }
