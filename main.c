@@ -143,7 +143,7 @@ void write_mem(int vaddr, int num){
     Physical_MEM[ppn][offset] = num;
     // change information
     LTable[ppn]++;
-    
+    Page_table[vpn][1] = 1;
     return;
 };
 
