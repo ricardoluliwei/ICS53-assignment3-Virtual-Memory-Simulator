@@ -196,7 +196,7 @@ int main(int argc, const char * argv[]) {
     // insert code here...
     printf("Hello, World!\n");
     init();
-    if(strcmp(argv[1], "LRU")==0){mode = 1;}
+    if(argc ==2 && strcmp(argv[1], "LRU")==0){mode = 1;}
     char input[800], *buffer;
     int bufsize = MAX_LINE;
     char* spliter = " \n";
@@ -205,7 +205,7 @@ int main(int argc, const char * argv[]) {
            printf("> ");
            memset(input, 0, 80);
            fgets(input, (sizeof input / sizeof input[0]), stdin);
-           if(input[strlen(input)-1] == '\n') input[strlen(input)-1]=0; 
+           if(input[strlen(input)-1] == '\n') input[strlen(input)-1]=0;
            if(strcmp(input, "quit") == 0){break;}
            buffer = strtok(input, spliter);
 
