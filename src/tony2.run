@@ -1,0 +1,13 @@
+FIFO
+showptable
+read 0
+read 5
+read 8
+read 17
+write 25 200
+read 40
+write 50 100
+showmain 0
+showdisk 0
+showptable
+quit

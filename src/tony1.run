@@ -1,0 +1,8 @@
+FIFO
+showptable
+read 9
+write 9 201
+showmain 0
+showdisk 0
+showptable
+quit

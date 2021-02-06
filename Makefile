@@ -1,3 +1,5 @@
 all:
-	gcc -g -fprofile-arcs -ftest-coverage main.c -o a.out
+	gcc -g -fprofile-arcs -ftest-coverage src/hw.c -o a.out
 
+clean:
+	rm -rf *.gcda *.gcno core*
