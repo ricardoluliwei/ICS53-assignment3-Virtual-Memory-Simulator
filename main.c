@@ -6,6 +6,7 @@
 //
 
 #include <stdio.h>
+#include <limits.h>
 #include "stdlib.h"
 #include "string.h"
 #define MAX_LINE 80
@@ -49,7 +50,7 @@ int LRU_swap(int vpn){
 
     // if no main memory page is empty, we need to find a victim
 
-    lowest = INT32_MAX;
+    lowest = INT_MAX;
     for(i = 0; i < 8; i++){
         if(Page_table[i][0]){
             // the page is in main memory, try to find victim
