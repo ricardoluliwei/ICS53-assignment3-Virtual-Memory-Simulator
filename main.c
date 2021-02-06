@@ -72,7 +72,18 @@ int LRU_swap(int vpn){
 };
 
 int FIFO_swap(int disk_number){
-    int i, min_page = 0, minbuf = -1, old_vnumber = -1; //min page: physical address that needs to be swaped
+    int i, j,min_page = 0, minbuf = 256, old_vnumber = -1; //min page: physical address that needs to be swaped
+    //check if has empty slot
+    for(i =0; i< 4; i++){
+        if(FTable[i] == -1){
+            for(j =0; j< 8; j++){// read from disk
+                Physical_MEM[i][j] = Disk[disk_number][j];
+            }
+            write_page_table(disk_number, 1, 0, i);
+            FTable[i] = counter;
+            return i;
+        }
+    }
     for(i =0; i< 4; i++){ // find phy addr with least usage
         if(FTable[i] <=minbuf){
             min_page = i;
