@@ -16,8 +16,6 @@ int Disk[8][8];
 
 int Physical_MEM[4][8];
 
-int PHY_MEM_INFO[4]; //store the logical address of related physical address
-
 int Page_table[8][3]; //0 is valid bit 1 is dirty bit 2 is PN
 
 int LTable[4]; // keep track of the activity score of each memory for LRU
@@ -68,7 +66,7 @@ int LRU_swap(int vpn){
     write_page_table(vpn, 1, 0, ppn);
 
     LTable[ppn] = 0;
-    PHY_MEM_INFO[ppn] = vpn;
+
     return ppn;
 };
 
@@ -106,42 +104,22 @@ int FIFO_swap(int disk_number){
 
 void read_mem(int vaddr){
     int i,j;
-    int pnumber = vaddr/8;
+    int vpn = vaddr/8;
     int offset = vaddr%8;
-    for(i =0 ;i < 4; i++){
-        if(PHY_MEM_INFO[i] == pnumber){
-            printf("%d\n", Physical_MEM[i][offset]);
-            for(j = 0; j< 4; j++){ //Update LRU Information
-                if(j != i){
-                    LTable[j] ++; //other page: add age
-                }else{
-                    LTable[j] = 0; // reset that page to 0
-                }
-            }
-            return;
-        }
+    int ppn;
+    if(Page_table[vpn][0]){
+        // if it is in memory
+        ppn = Page_table[vpn][2];
+    } else{
+        printf("A Page Fault Has Occurred\n");
+        ppn = mode ? LRU_swap(vpn) : FIFO_swap(vpn);
     }
-    printf("A Page Fault Has Occurred\n");
-    int n_pnumber = 0;
-    if(mode){
-        n_pnumber = LRU_swap(vaddr);
-    }else{
-        n_pnumber = FIFO_swap(vaddr);
-    }
-    for(i =0 ;i < 4; i++){
-        if(PHY_MEM_INFO[i] == n_pnumber){
-            printf("%d\n", Physical_MEM[i][offset]);
-            for(j = 0; j< 4; j++){ //Update LRU Information
-                if(j != i){
-                    LTable[j] ++; //other page: add age
-                }else{
-                    LTable[j] = 0; // reset that page to 0
-                }
-            }
-            return;
-        }
-    }
-    //printf("%d\n", Physical_MEM[i][offset]);
+    
+    // read
+    printf("%d\n", Physical_MEM[ppn][offset]);
+
+    //
+    LTable[ppn]++;
     return;
 };
 
@@ -157,6 +135,7 @@ void write_mem(int vaddr, int num){
         // if it is in main memory
         ppn = Page_table[vpn][2];
     } else{
+        printf("A Page Fault Has Occurred\n");
         ppn = mode ? LRU_swap(vpn) : FIFO_swap(vpn);
     }
     // write
